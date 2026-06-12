@@ -1,0 +1,66 @@
+# Strategic Merge Patch : fusion avec le Deployment original
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clinic-deploy
+spec:
+  template:
+    spec:
+      containers:
+      - name: springboot
+        # Nouvelle variable d'environnement : contexte applicatif = /tp7
+        env:
+        - name: SERVER_SERVLET_CONTEXT_PATH
+          value: "/tp7"
+        
+        # Patch 1 : remplacer (et corriger) la sonde de démarrage
+        # $patch: replace signifie "remplace complètement cet objet"
+        startupProbe:
+          $patch: replace
+          httpGet:
+            path: /tp7/actuator/health/readiness  # Chemin adapté au contexte
+            port: 8080
+          timeoutSeconds: 2
+          periodSeconds: 10
+          initialDelaySeconds: 10
+          failureThreshold: 30
+          
+        # Patch 2 : remplacer la sonde de vie
+        livenessProbe:
+          $patch: replace
+          httpGet:
+            path: /tp7/actuator/health/liveness
+            port: 8080
+          timeoutSeconds: 2
+          periodSeconds: 10
+          initialDelaySeconds: 30
+          failureThreshold: 3
+          
+        # Patch 3 : remplacer la sonde de disponibilité
+        readinessProbe:
+          $patch: replace
+          httpGet:
+            path: /tp7/actuator/health/readiness
+            port: 8080
+          timeoutSeconds: 2
+          periodSeconds: 10
+          initialDelaySeconds: 20
+          failureThreshold: 6
+
+---
+# Aussi modifier l'Ingress pour adapter le chemin
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: clinic-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - pathType: Prefix
+        path: /tp7  # Changé de / à /tp7
+        backend:
+          service:
+            name: clinic-service
+            port:
+              number: 8080
