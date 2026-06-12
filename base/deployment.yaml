@@ -1,0 +1,46 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clinic-deploy
+  labels:
+    myversion: "1"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clinic-front
+  template:
+    metadata:
+      labels:
+        app: clinic-front
+    spec: # specification du pod
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: springboot
+          image: ghcr.io/yixuanhuangyx/spring-petclinic:4.0.0-SNAPSHOT
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            timeoutSeconds: 2
+            periodSeconds: 10
+            initialDelaySeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            timeoutSeconds: 2
+            periodSeconds: 10
+            initialDelaySeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            timeoutSeconds: 2
+            periodSeconds: 10
+            initialDelaySeconds: 20
+            failureThreshold: 6
